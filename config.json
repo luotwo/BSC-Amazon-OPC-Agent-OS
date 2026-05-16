@@ -6,12 +6,12 @@
     "model": "gpt-image-2-official",
     "output_format": "png",
     "base_url": "https://api.apimart.ai",
-    "enabled": false
+    "enabled": true
   },
   "sorftime_mcp": {
     "endpoint": "https://mcp.sorftime.com",
     "api_key": "",
-    "enabled": false
+    "enabled": true
   },
   "sif_mcp": {
     "endpoint": "https://mcp.sif.com/mcp",
@@ -27,7 +27,7 @@
     "base_url": "https://api.apimart.ai",
     "model": "gemini-3-pro-image-preview",
     "resolution": "1K",
-    "enabled": true,
+    "enabled": false,
     "api_key": ""
   }
 }
