@@ -67,3 +67,16 @@ Amazon 产品运营工具：智能图片生成 + Listing 优化。
 2. 运行 `BSC-OPC-Agent.exe`
 3. 浏览器打开 `http://127.0.0.1:5173`
 4. 在设置中配置 API Key
+   
+## 技术支持
+
+- 微信公众号：商海蟹
+- 知识星球：商海蟹
+- GitHub Issues：https://github.com/luotwo/BSC-Amazon-OPC-Agent-OS/issues
+<img width="1774" height="887" alt="9ecebe29f171c255686c0719c4e69119" src="https://github.com/user-attachments/assets/cf0b5bc6-f5bf-4d9f-ac6a-c5e85cf09685" />
+
+---
+<img width="1254" height="1254" alt="未命名" src="https://github.com/user-attachments/assets/dad1217b-e17a-4f1d-9323-7ea8d9854652" />
+
+**版权所有 © 商海蟹**
+
