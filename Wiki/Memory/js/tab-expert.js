@@ -24,6 +24,9 @@ function startExpertAnalysis() {
   if (!site) { showToast('请选择站点'); return; }
   if (!asin) { showToast('请输入 ASIN'); return; }
   var jobId = crypto.randomUUID();
+  showToast('正在调用 SIF + SellerSprite + Sorftime 生成专家建议，预计 30-60 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabExpert .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
   document.getElementById('expertEmpty').style.display = 'block';
   document.getElementById('expertEmpty').innerHTML = '<div class="icon">⏳</div>正在采集数据并生成专家建议...<br><small>SIF MCP + SellerSprite + Sorftime · 约 30-60 秒</small>';
   ['expertTabTitle','expertTabBullets','expertTabQa','expertTabSelling','expertTabInsights'].forEach(function(id){ document.getElementById(id).style.display='none'; });
@@ -31,6 +34,7 @@ function startExpertAnalysis() {
   fetch('/api/expert-analysis/' + jobId + '?asin=' + encodeURIComponent(asin) + '&country=' + encodeURIComponent(site))
     .then(function(r){return r.json();})
     .then(function(data){
+      if (btn) { btn.disabled = false; btn.textContent = '🧠 开始分析'; }
       if (data.error) { document.getElementById('expertEmpty').innerHTML = '<div class="icon">⚠️</div>'+escHtml(data.error); return; }
       window.expertData = data;
       document.getElementById('expertEmpty').style.display = 'none';
@@ -43,7 +47,10 @@ function startExpertAnalysis() {
       if (data.data_insights) renderDataInsights(data.data_insights);
       switchExpertTab('title');
       showToast('专家建议已生成');
-    }).catch(function(e){ document.getElementById('expertEmpty').innerHTML = '<div class="icon">❌</div>请求失败: '+escHtml(e.message); });
+    }).catch(function(e){
+      if (btn) { btn.disabled = false; btn.textContent = '🧠 开始分析'; }
+      document.getElementById('expertEmpty').innerHTML = '<div class="icon">❌</div>请求失败: '+escHtml(e.message);
+    });
 }
 
 // ── Expert Tab Switch ──

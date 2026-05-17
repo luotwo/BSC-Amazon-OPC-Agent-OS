@@ -15,6 +15,9 @@ async function startAdInspect() {
   if (!a) { showToast('请输入 ASIN'); return; }
   if (!/^[A-Za-z0-9]{5,15}$/.test(a)) { showToast('ASIN 格式错误'); return; }
   try { await getAdSettings(); } catch(e) {}
+  showToast('正在查询广告架构下钻数据，预计 10-30 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabAdAnalysis .btn-mkt-start[onclick*="startAdInspect"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 查询中...'; }
   // Show inspect panel without calling switchAdTab (avoid recursion)
   document.querySelectorAll('#adSubTabs .expert-tab').forEach(function(t){t.classList.remove('active');});
   ['adTabDashboard','adTabCampaign','adTabKeyword','adTabSearchterm','adTabBidbudget','adTabPlacement','adTabCompete','adTabInspect'].forEach(function(id){
@@ -35,10 +38,14 @@ async function startAdInspect() {
   try {
     var r = await fetch('/api/ad-inspect/' + jid + '?asin=' + encodeURIComponent(a) + '&country=' + encodeURIComponent(c));
     var d = await r.json();
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 查广告'; }
     if (d.error) { showToast('分析失败：' + d.error); return; }
     AI = { data: d, asin: a, country: c, l2d: null, l2name: '', l2cid: '', l3agid: '' };
     renderL1();
-  } catch(err) { showToast('请求失败：' + err.message); }
+  } catch(err) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 查广告'; }
+    showToast('请求失败：' + err.message);
+  }
 }
 
 function aiBC(parts) {

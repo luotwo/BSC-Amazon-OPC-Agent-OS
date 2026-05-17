@@ -53,6 +53,9 @@ async function startAdAnalysis() {
 
   try { await getAdSettings(); } catch(e) {}
   adShowLoading();
+  showToast('正在调用 SIF + SellerSprite 分析广告数据，预计 15-30 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabAdAnalysis .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
 
   var jobId = 'ad' + Date.now().toString(36) + Math.random().toString(36).substr(2,6);
   var qs = '?asin=' + encodeURIComponent(asin) +
@@ -61,10 +64,12 @@ async function startAdAnalysis() {
   fetch('/api/ad-analysis/' + jobId + qs)
     .then(function(r){ return r.json(); })
     .then(function(data){
+      if (btn) { btn.disabled = false; btn.textContent = '📊 开始分析'; }
       if (data.error) { showToast('分析失败：' + data.error); adShowError(data.error); return; }
       adRenderAll(data);
     })
     .catch(function(err){
+      if (btn) { btn.disabled = false; btn.textContent = '📊 开始分析'; }
       showToast('请求失败：' + err.message);
       adShowError(err.message);
     });
@@ -133,13 +138,13 @@ function renderAdDashboard(data) {
       else statusCls = val >= item.good ? 'good' : (val >= item.warn ? 'warn' : 'bad');
     }
     var borderColors = {good:'var(--green)', warn:'var(--accent2)', bad:'var(--red)'};
-    var bgColors = {good:'rgba(34,197,94,.06)', warn:'rgba(245,158,11,.06)', bad:'rgba(239,68,68,.06)'};
-    var bc = borderColors[statusCls] || 'var(--border)';
+    var bgColors = {good:'rgba(34,197,94,.08)', warn:'rgba(245,158,11,.08)', bad:'rgba(239,68,68,.08)'};
+    var bc = borderColors[statusCls] || 'var(--text)';
     var bg = bgColors[statusCls] || 'var(--bg2)';
     html += '<div class="mkt-card" style="padding:8px 10px;border-left:3px solid ' + bc + ';background:' + bg + ';margin:0">' +
-      '<div style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">' + escHtml(item.k) + '</div>' +
-      '<div style="font-size:1.1rem;font-weight:700;color:' + bc + '">' + escHtml(String(display)) + '</div>' +
-      '<div style="font-size:.58rem;color:var(--muted);margin-top:2px">目标: ' + escHtml(item.target) + '</div>' +
+      '<div style="font-size:.62rem;color:#94a3b8;font-weight:600;letter-spacing:.5px;margin-bottom:2px">' + escHtml(item.k) + '</div>' +
+      '<div style="font-size:1.15rem;font-weight:700;color:' + bc + '">' + escHtml(String(display)) + '</div>' +
+      '<div style="font-size:.55rem;color:#94a3b8;margin-top:2px">目标: ' + escHtml(item.target) + '</div>' +
       '</div>';
   });
   html += '</div>';
@@ -156,9 +161,16 @@ function renderAdDashboard(data) {
 
   // Channel breakdown
   var ch = d.channel_breakdown || {};
-  if (Object.keys(ch).length) {
-    html += '<div class="mkt-card"><div class="mkt-card-title">渠道拆解</div><div class="mkt-col-grid">';
-    ['SP','SB','SBV','SD'].forEach(function(c){ if (ch[c] !== undefined) html += '<div class="mkt-metric"><span class="mkt-metric-label">' + c + '</span><span class="mkt-metric-value">' + _fmtPct(ch[c]) + '</span></div>'; });
+  if (Object.keys(ch).length > 1) {  // >1 because _source key is always present
+    var isTrendProxy = ch._source === 'trend_proxy';
+    var trendLabel = {100:'📈 增长',80:'📈 上升',50:'➡ 平稳',20:'📉 下降',0:'❌ 无效'};
+    html += '<div class="mkt-card"><div class="mkt-card-title">渠道拆解' + (isTrendProxy ? ' <small style="color:var(--accent2);font-weight:400">(趋势推断)</small>' : '') + '</div><div class="mkt-col-grid">';
+    ['SP','SB','SBV','SD'].forEach(function(c){
+      if (ch[c] !== undefined) {
+        var display = isTrendProxy ? (trendLabel[ch[c]] || ch[c]) : _fmtPct(ch[c]);
+        html += '<div class="mkt-metric"><span class="mkt-metric-label">' + c + '</span><span class="mkt-metric-value">' + display + '</span></div>';
+      }
+    });
     html += '</div></div>';
   }
 

@@ -18,11 +18,14 @@ async function startKeywordLibrary() {
   KW_STATE.asin = asin;
   KW_STATE.country = marketplace;
   try { await getKeywordLibrarySettings(); } catch(e) {}
-  showToast('正在查询关键词数据...');
+  showToast('正在查询关键词信号与竞争数据，预计 15-30 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabKeywordLibrary .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
 
   try {
     const resp = await fetch(`/api/keyword-library/kw_${Date.now()}?asin=${encodeURIComponent(asin)}&country=${encodeURIComponent(marketplace)}`);
     const data = await resp.json();
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
     if (data.error) {
       showToast(data.error);
       return;
@@ -30,8 +33,8 @@ async function startKeywordLibrary() {
     KW_STATE.data = data;
     KW_STATE.jobId = data.job_id;
     renderKeywordLibrary(data);
-    showToast('关键词数据加载完成');
   } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
     showToast('查询失败: ' + (e.message || '网络错误'));
   }
 }

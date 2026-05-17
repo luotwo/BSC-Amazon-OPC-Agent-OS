@@ -50,6 +50,9 @@ function startReplenishment() {
   if (!mp) { showToast('请选择站点'); return; }
   if (!asin || !/^[A-Za-z0-9]{5,15}$/.test(asin)) { showToast('ASIN格式错误'); return; }
   updateReplSourceBadges();
+  showToast('正在分析补货数据，预计 10-20 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabReplenishment .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
   var ph = document.getElementById('replPlaceholder');
   var tabs = document.getElementById('replSubTabs');
   if (ph) ph.style.display = 'none';
@@ -61,12 +64,16 @@ function startReplenishment() {
   fetch('/api/replenishment/repl_' + Date.now().toString(36) + '?asin=' + encodeURIComponent(asin) + '&marketplace=' + encodeURIComponent(mp))
     .then(function(r){ return r.json(); })
     .then(function(data){
+      if (btn) { btn.disabled = false; btn.textContent = '▶ 开始分析'; }
       if (data.error) { showToast(data.error); if (ph) { ph.style.display = 'block'; ph.innerHTML = '<div style="color:var(--red);padding:20px">' + escHtml(data.error) + '</div>'; } return; }
       REPL_STATE.data = data;
       ['overview','variants','trend','plan'].forEach(function(t){ renderReplSubTab(t, data); });
       document.getElementById('replSubOverview').style.display = 'block';
     })
-    .catch(function(err){ showToast('请求失败'); });
+    .catch(function(err){
+      if (btn) { btn.disabled = false; btn.textContent = '▶ 开始分析'; }
+      showToast('请求失败');
+    });
 }
 
 function renderReplSubTab(tab, data) {
@@ -137,6 +144,9 @@ function startPackaging() {
   if (!mp) { showToast('请选择站点'); return; }
   if (!asin || !/^[A-Za-z0-9]{5,15}$/.test(asin)) { showToast('ASIN格式错误'); return; }
   updatePackSourceBadges();
+  showToast('正在分析产品包装方案，预计 10-15 秒，请耐心等待…', 'info');
+  var btn2 = document.querySelector('#mainTabPackaging .btn-mkt-start');
+  if (btn2) { btn2.disabled = true; btn2.textContent = '⏳ 分析中...'; }
   var ph = document.getElementById('packPlaceholder');
   var resultEl = document.getElementById('packResult');
   if (ph) ph.style.display = 'none';
@@ -145,11 +155,15 @@ function startPackaging() {
   fetch('/api/packaging-suggestions/pack_' + Date.now().toString(36) + '?asin=' + encodeURIComponent(asin) + '&marketplace=' + encodeURIComponent(mp))
     .then(function(r){ return r.json(); })
     .then(function(data){
+      if (btn2) { btn2.disabled = false; btn2.textContent = '▶ 开始分析'; }
       if (data.error) { showToast(data.error); if (ph) { ph.style.display = 'block'; ph.innerHTML = '<div style="color:var(--red);padding:20px">' + escHtml(data.error) + '</div>'; } return; }
       PACK_DATA = data;
       renderPackaging(data);
     })
-    .catch(function(err){ showToast('请求失败'); });
+    .catch(function(err){
+      if (btn2) { btn2.disabled = false; btn2.textContent = '▶ 开始分析'; }
+      showToast('请求失败');
+    });
 }
 
 function renderPackaging(data) {

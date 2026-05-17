@@ -61,6 +61,10 @@ async function startListingAudit() {
   try { await getAuditSettings(); } catch(e) {}
   AUDIT_STATE.loading = true;
   auditShowLoading();
+  showToast('正在调用 MCP 数据源进行全面分析，预计 15-30 秒，请耐心等待…', 'info');
+
+  var btn = document.querySelector('#mainTabListingAudit .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
 
   var jobId = 'audit' + Date.now().toString(36) + Math.random().toString(36).substr(2,6);
   var qs = '?asin=' + encodeURIComponent(asin) +
@@ -71,11 +75,13 @@ async function startListingAudit() {
     .then(function(data){
       AUDIT_STATE.loading = false;
       AUDIT_STATE.data = data;
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
       if (data.error) { showToast('审核失败：' + data.error); auditShowError(data.error); return; }
       auditRenderAll(data);
     })
     .catch(function(err){
       AUDIT_STATE.loading = false;
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
       showToast('请求失败：' + err.message);
       auditShowError(err.message);
     });

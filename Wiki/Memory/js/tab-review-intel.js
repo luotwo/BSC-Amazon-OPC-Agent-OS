@@ -82,6 +82,9 @@ function startReviewIntel() {
   if (!asin) { showToast('请输入 ASIN'); return; }
   if (!/^[A-Za-z0-9]{5,15}$/.test(asin)) { showToast('ASIN 格式错误'); return; }
   getRISettings();
+  showToast('正在采集评论数据并进行 AI 分析，预计 20-40 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabReviewIntel .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
   RI_DATA = null;
   document.getElementById('riProgressBar').style.display = 'block';
   document.getElementById('riProgressFill').style.width = '2%';
@@ -122,11 +125,15 @@ function pollReviewIntel(jobId) {
       document.getElementById('riProgressText').textContent = detail;
       if (job.status === 'failed') {
         clearInterval(RI_INTERVAL);
+        var btn = document.querySelector('#mainTabReviewIntel .btn-mkt-start');
+        if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
         document.getElementById('riProgressText').textContent = '❌ 失败: ' + (job.errors ? JSON.stringify(job.errors).substring(0,200) : '未知错误');
         return;
       }
       if (job.status === 'done' && job.view_model) {
         clearInterval(RI_INTERVAL);
+        var btn2 = document.querySelector('#mainTabReviewIntel .btn-mkt-start');
+        if (btn2) { btn2.disabled = false; btn2.textContent = '🔍 开始分析'; }
         document.getElementById('riProgressBar').style.display = 'none';
         document.getElementById('riProgressText').style.display = 'none';
         renderRIResults(job.view_model);

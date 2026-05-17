@@ -21,26 +21,27 @@ function handleFiles(files) {
       uploadedFiles.push(f);
     }
   }
-  renderUploadThumbs();
+  renderUploadedToRefGrid();
   updateAsinDivider();
 }
 
-function renderUploadThumbs() {
-  var container = document.getElementById('previewThumbs');
-  container.innerHTML = uploadedFiles.map(function(f,i){
+// Renders drag-dropped / clicked local images directly into the product-reference grid
+function renderUploadedToRefGrid() {
+  var container = document.getElementById('refImageGrid');
+  if (!container) return;
+  if (uploadedFiles.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="icon">📷</div>请上传产品图片，或输入 ASIN 后点击「开始采集」<br>点击图片即可设为 GPT Image-2 生成原型</div>';
+    return;
+  }
+  var html = '<div class="ref-section-label">📦 主ASIN图 <span class="ref-section-count">'+uploadedFiles.length+'</span></div>';
+  html += '<div class="ref-image-grid">';
+  uploadedFiles.forEach(function(f, i){
     var url = URL.createObjectURL(f);
-    return '<img src="'+url+'" alt="'+f.name+'" title="'+f.name+'" onclick="selectUploadedFile('+i+')" class="'+(selectedPrototype&&selectedPrototype._uploadIndex===i?'selected':'')+'">';
-  }).join('');
-}
-
-function selectUploadedFile(index) {
-  var f = uploadedFiles[index];
-  selectedPrototype = {url:URL.createObjectURL(f), filename:f.name, type:'uploaded', _uploadIndex:index};
-  renderUploadThumbs();
-  // Refresh prompt buttons
-  var btns = document.querySelectorAll('.btn-send-chatgpt');
-  btns.forEach(function(b){if(b.disabled){b.disabled=false;b.textContent='🚀 发送生成';}});
-  showToast('已选择: '+f.name,'success');
+    var sel = (selectedPrototype && selectedPrototype.filename === f.name && selectedPrototype._uploaded) ? ' selected' : '';
+    html += '<div class="ref-image-card'+sel+'" onclick="var u=URL.createObjectURL(uploadedFiles['+i+']);selectedPrototype={url:u,filename:uploadedFiles['+i+'].name,type:\'main\',_uploaded:true};renderUploadedToRefGrid();" title="点击选为产品原型"><span class="img-type main">主图</span><img src="'+url+'" alt="'+f.name+'" loading="lazy"><div class="img-name" title="'+f.name+'">'+f.name+'</div></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // ── Job Flow ──
@@ -78,7 +79,11 @@ async function startJob() {
   if (!marketplace) { showToast('请选择站点'); return; }
   var c1688Url = document.getElementById('c1688Url').value.trim();
   var hasUploaded = uploadedFiles.length > 0;
-  cleanAfterCollect();
+  var _uploaded = uploadedFiles.slice(); // snapshot survives async submission
+  // Clear 1688 fields only (keep uploaded images visible until SSE completion)
+  document.getElementById('c1688Url').value = '';
+  document.getElementById('c1688Status').style.display = 'none';
+  updateAsinDivider();
 
   // 【校验1】1688链接和上传图片不能同时有值
   if (c1688Url && hasUploaded) {
@@ -136,8 +141,8 @@ async function startJob() {
   formData.append('asin', asin); formData.append('marketplace', marketplace);
   formData.append('c1688_url', c1688Url);
   formData.append('skip_amazon_images', hasExternalImages ? '1' : '0');
-  // Append uploaded files if any
-  uploadedFiles.forEach(function(f){
+  // Append uploaded files if any (use snapshot to survive cleanAfterCollect)
+  _uploaded.forEach(function(f){
     formData.append('images', f);
   });
   try {
@@ -188,7 +193,7 @@ function cleanAfterCollect() {
   document.getElementById('c1688Url').value = '';
   document.getElementById('c1688Status').style.display = 'none';
   uploadedFiles = [];
-  document.getElementById('previewThumbs').innerHTML = '';
+  renderUploadedToRefGrid();
   updateAsinDivider();
 }
 
@@ -268,22 +273,26 @@ function renderRefImages(images, wbImageUrl) {
   }
   hint.classList.add('show');
 
-  // Split into main ASIN images vs variant images
-  var mainImgs = [], varImgs = [], others = [];
+  // Split into main ASIN images vs variant images (uploads go into mainImgs)
+  var mainImgs = [], varImgs = [];
   var asinPrefix = (currentAsin || '') + '_';
   refOnly.forEach(function(img){
     var fn = img.filename || '';
     if (img.type === 'wb') { mainImgs.unshift(img); }
     else if (fn.indexOf('_variant') >= 0) { varImgs.push(img); }
-    else if (fn.indexOf(asinPrefix) === 0) { mainImgs.push(img); }
-    else { others.push(img); }
+    else { mainImgs.push(img); }
   });
 
   function _renderCard(img, typeOverride){
     var typeCls = typeOverride || img.type;
-    var typeLabelMap = {wb:'白底抠图', main:'主图', variant:'变体', aplus:'A+'};
+    var typeLabelMap = {wb:'白底抠图', main:'主图', variant:'变体', aplus:'A+', uploaded:'本地上传'};
     var typeLabel = typeLabelMap[typeCls] || typeCls;
-    var sel = selectedPrototype && selectedPrototype.url === img.url ? ' selected' : '';
+    // Match selected prototype by filename (survives blob→server URL transition)
+    var sel = '';
+    if (selectedPrototype) {
+      if (selectedPrototype.url === img.url) sel = ' selected';
+      else if (selectedPrototype.filename === img.filename) sel = ' selected';
+    }
     return '<div class="ref-image-card'+sel+'" onclick="selectPrototype(\''+img.url.replace(/'/g,"\\'")+'\',\''+img.filename.replace(/'/g,"\\'")+'\',\''+img.type+'\')" title="点击选为产品原型"><span class="img-type '+typeCls+'">'+typeLabel+'</span><button class="ref-preview-btn" onclick="event.stopPropagation();previewImage(\''+img.url.replace(/'/g,"\\'")+'\',\''+img.filename.replace(/'/g,"\\'")+'\')" title="预览大图">🔍</button><img src="'+img.url+'" alt="'+img.filename+'" loading="lazy"><div class="img-name" title="'+img.filename+'">'+img.filename+'</div></div>';
   }
 
@@ -295,10 +304,6 @@ function renderRefImages(images, wbImageUrl) {
   if (varImgs.length > 0) {
     html += '<div class="ref-section-label">🎨 变体图 <span class="ref-section-count">'+varImgs.length+'</span></div>';
     html += '<div class="ref-image-grid">'+varImgs.map(function(img){return _renderCard(img, 'variant');}).join('')+'</div>';
-  }
-  if (others.length > 0) {
-    html += '<div class="ref-section-label">📁 其他 <span class="ref-section-count">'+others.length+'</span></div>';
-    html += '<div class="ref-image-grid">'+others.map(function(img){return _renderCard(img, img.type);}).join('')+'</div>';
   }
   container.innerHTML = html;
 }
@@ -321,7 +326,8 @@ async function loadPrompts(jobId) {
     var container = document.getElementById('promptList');
     var promptCard = function(p,i,isOpen){
       var pid = 'promptBody_'+i;
-      return '<div class="prompt-card"><div class="ptype'+(isOpen?'':' collapsed')+'" onclick="togglePromptBody(\''+pid+'\',this)"><span class="toggle-arrow">▼</span> '+(p.label_cn||p.type)+' · '+(p.module_size||'')+' · '+p.aspect+'</div><div class="prompt-body'+(isOpen?'':' collapsed')+'" id="'+pid+'"><div style="display:flex;gap:8px;margin-top:8px;"><div style="flex:1;min-width:0;display:flex;flex-direction:column;"><textarea class="ptext" id="promptText_'+i+'" rows="5">'+escHtml(p.prompt)+'</textarea></div><div style="flex:1;min-width:0;display:flex;flex-direction:column;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:.65rem;color:var(--muted);">中文参考</span><div style="display:flex;gap:4px;"><button class="translate-btn" onclick="translatePrompt('+i+')" title="翻译英文提示词为中文">翻译中文</button><button class="copy-btn" onclick="copyPromptCN('+i+')" title="复制中文" style="width:24px;height:24px;font-size:.7rem;">📋</button></div></div><textarea class="ptext" id="promptTextCN_'+i+'" rows="5" placeholder="点击翻译按钮翻译英文提示词..."></textarea></div></div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;"><div class="pmeta" style="margin:0;">Prompt #'+(i+1)+' · '+(document.getElementById('tglGemini').checked?'Gemini-3-Nano':'GPT-Image-2')+'</div></div></div><div class="pactions"><button class="btn-send-chatgpt" onclick="sendToChatGPT('+i+')">🚀 发送生成'+((genCount[i]||0)>0?' (已生成' + genCount[i] + '次)':'')+'</button></div></div>';
+      var mainHint = (p.type==='main') ? ' <span style="font-size:.58rem;color:var(--accent2);">（默认生成白底主图，其它6张主图提示词需用户自定义保存到模板库，自行选择模板）</span>' : '';
+      return '<div class="prompt-card"><div class="ptype'+(isOpen?'':' collapsed')+'" onclick="togglePromptBody(\''+pid+'\',this)"><span class="toggle-arrow">▼</span> '+(p.label_cn||p.type)+' · '+(p.module_size||'')+' · '+p.aspect+mainHint+'</div><div class="prompt-body'+(isOpen?'':' collapsed')+'" id="'+pid+'"><div style="display:flex;gap:8px;margin-top:8px;"><div style="flex:1;min-width:0;display:flex;flex-direction:column;"><textarea class="ptext" id="promptText_'+i+'" rows="5">'+escHtml(p.prompt)+'</textarea></div><div style="flex:1;min-width:0;display:flex;flex-direction:column;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:.65rem;color:var(--muted);">中文参考</span><div style="display:flex;gap:4px;"><button class="translate-btn" onclick="translatePrompt('+i+')" title="翻译英文提示词为中文">翻译中文</button><button class="copy-btn" onclick="copyPromptCN('+i+')" title="复制中文" style="width:24px;height:24px;font-size:.7rem;">📋</button></div></div><textarea class="ptext" id="promptTextCN_'+i+'" rows="5" placeholder="点击翻译按钮翻译英文提示词..."></textarea></div></div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;"><div class="pmeta" style="margin:0;">Prompt #'+(i+1)+' · '+(document.getElementById('tglGemini').checked?'Gemini-3-Nano':'GPT-Image-2')+'</div></div></div><div class="pactions"><button class="btn-send-chatgpt" onclick="sendToChatGPT('+i+')">🚀 发送生成'+((genCount[i]||0)>0?' (已生成' + genCount[i] + '次)':'')+'</button></div></div>';
     };
     var html = '';
     // Prompts 1-2: always open
@@ -403,12 +409,15 @@ async function translatePromptCNtoEN(i) {
 async function sendToChatGPT(promptIndex) {
   if (!currentAsin) { alert('任务状态丢失，请重新提交'); return; }
   if (!selectedPrototype) { showToast('请先选择一张产品主图作为生成原型（点击图片即可选中）', 'error'); return; }
+  if (typeof selectedPrototype.url === 'string' && selectedPrototype.url.startsWith('blob:')) {
+    showToast('请先点击「开始采集」提交任务，将本地图片上传到服务器后再生成', 'error'); return;
+  }
   var textarea = document.getElementById('promptText_'+promptIndex);
   var editedPrompt = textarea?textarea.value.trim():'';
   if (!editedPrompt) { alert('提示词为空，请检查'); return; }
 
   var genModelName = (document.getElementById('tglGemini')||{}).checked ? 'Gemini-3 Nano Banana' : 'GPT-Image-2';
-  showToast('图片生成速度取决于 ' + genModelName + ' 平台，预计 10-60 秒，请耐心等待…', 'info');
+  showToast('图片生成速度取决于 AI 生图平台，预计 10-60 秒，请耐心等待…', 'info');
 
   var genDot = document.querySelector('#stepGenerate .step-dot');
   if (genDot) genDot.className = 'step-dot active';

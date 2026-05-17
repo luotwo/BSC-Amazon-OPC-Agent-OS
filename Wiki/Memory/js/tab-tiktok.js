@@ -24,14 +24,21 @@ async function startTiktokAnalysis() {
   if (!site) { showToast('请选择站点'); return; }
   if (!searchName) { showToast('请输入产品英文名称'); return; }
   try { var r=await fetch('/api/settings'); if(r.ok) updateTiktokSourceBadge(await r.json()); } catch(e) {}
+  showToast('正在采集 TikTok 竞品数据，预计 10-30 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabTiktok .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
   var area = document.getElementById('tkSimilarArea');
   area.innerHTML = '<div class="mkt-loading"><div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div style="margin-top:10px">正在采集 TikTok 数据...</div></div>';
   var jobId = 'tk' + Date.now().toString(36) + Math.random().toString(36).substr(2,6);
   fetch('/api/tiktok-analysis/' + jobId + '?site=' + encodeURIComponent(site) + '&searchName=' + encodeURIComponent(searchName) + '&page=' + page)
     .then(function(r){return r.json();}).then(function(data){
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
       if (data.error) { area.innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">'+escHtml(data.error)+'</div>'; return; }
       tkRenderSimilar(data);
-    }).catch(function(err){ area.innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">请求失败：'+escHtml(err.message)+'</div>'; });
+    }).catch(function(err){
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
+      area.innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">请求失败：'+escHtml(err.message)+'</div>';
+    });
 }
 
 function tkRenderSimilar(data) {
@@ -282,7 +289,7 @@ async function tkSearchCategory() {
     if (!items.length) { area.innerHTML = '<div class="mkt-empty-card">未找到匹配类目</div>'; return; }
     var html = '<div class="mkt-section-title">类目查询结果</div>';
     html += '<div class="mkt-filter-table"><table><tr><th>类目名称</th><th>类目节点ID</th><th>操作</th></tr>';
-    for (var i=0;i<items.length;i++){var c=items[i];html+='<tr><td>'+escHtml(c['类目名称']||c.category_name||'—')+'</td><td>'+escHtml(c.nodeId||'—')+'</td><td><button onclick="document.getElementById(\'tkNodeId\').value=\''+escHtml(c.nodeId||'')+'\';document.getElementById(\'tkCatRptSite\').value=\''+escHtml(site)+'\'" style="font-size:.6rem;padding:2px 8px;">填入报告</button></td></tr>';}
+    for (var i=0;i<items.length;i++){var c=items[i];var nid=c.nodeId||c.nodeid||'';html+='<tr><td>'+escHtml(c['类目名称']||c.category_name||'—')+'</td><td>'+escHtml(nid||'—')+'</td><td><button onclick="document.getElementById(\'tkNodeId\').value=\''+escHtml(nid)+'\';document.getElementById(\'tkCatRptSite\').value=\''+escHtml(site)+'\';switchTiktokTab(\'catreport\');tkLoadCategoryReport()" style="font-size:.6rem;padding:2px 8px;">填入报告</button></td></tr>';}
     html += '</table></div>';
     area.innerHTML = html;
   } catch(e) { area.innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">'+escHtml(e.message)+'</div>'; }

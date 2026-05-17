@@ -14,7 +14,7 @@ function updatePatentSourceBadges(cfg) {
   var enabled = !!ss.enabled;
   var cls = enabled && hasCreds ? 'mkt-src-on' : enabled ? 'mkt-src-incomplete' : 'mkt-src-off';
   var icon = enabled && hasCreds ? '✅' : enabled ? '⚠️' : '⛔';
-  el.textContent = icon + ' SellerSprite 全球商标库：' + (enabled ? (hasCreds ? '已开启' : '缺Key') : '未开启');
+  el.textContent = icon + ' SellerSprite 全球商标库：' + (enabled ? (hasCreds ? '已开启（卖家精灵MCP 全球商标库暂缓开放。。。）' : '缺Key') : '未开启');
   el.className = 'mkt-src-tag ' + cls;
 }
 
@@ -44,6 +44,9 @@ async function startPatentAnalysis() {
   if (!keyword) { showToast('请输入品牌名或关键词'); return; }
 
   try { await getPatentSettings(); } catch(e) {}
+  showToast('正在查询全球商标库，预计 5-15 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabPatent .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 查询中...'; }
   var loadingEl = document.getElementById('patentTabSearch');
   loadingEl.innerHTML = '<div class="mkt-loading"><div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div style="margin-top:10px">正在查询全球商标库...</div></div>';
   switchPatentTab('search');
@@ -54,11 +57,13 @@ async function startPatentAnalysis() {
 
   try {
     var r = await fetch(url); var data = await r.json();
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 查询商标'; }
     if (data.errors && data.errors._all) { loadingEl.innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">' + escHtml(data.errors._all) + '</div>'; return; }
     PT_STATE.data = data;
     renderPatentSearch(data);
     renderPatentStats(data);
   } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 查询商标'; }
     loadingEl.innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">请求失败：' + escHtml(e.message) + '</div>';
   }
 }
@@ -155,7 +160,7 @@ function renderPatentDetail(detail) {
     '<div class="mkt-card"><div class="mkt-card-head">' + logoHtml + ' ' + escHtml(brandName) + ' <small>' + escHtml(d.id || '') + '</small></div>' +
     '<div class="mkt-metric-row">' +
     _metric('申请人', applicant) +
-    _metric('状态', '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;background:' + statusColor + ';color:#fff">' + escHtml(d.status || '—') + '</span>') +
+    _metric('状态', '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;background:' + statusColor + ';color:#fff">' + escHtml(d.status || '—') + '</span>', '', true) +
     _metric('商标种类', escHtml(d.markFeature || '—')) +
     _metric('类型', escHtml(d.type || '—')) +
     _metric('申请日期', escHtml(d.applicationDate || '—')) +

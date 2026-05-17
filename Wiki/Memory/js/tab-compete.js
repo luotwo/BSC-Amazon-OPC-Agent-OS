@@ -32,15 +32,22 @@ function startCompAnalysis() {
     var url = '/api/competition-analysis/' + crypto.randomUUID() + '?asin=' + encodeURIComponent(myAsin) + '&country=' + encodeURIComponent(site);
     if (compList) url += '&comp_asins=' + encodeURIComponent(compList);
     COMP_STATE.data = null;
+    showToast('正在调用 SIF MCP + Amazon 实时抓取，预计 20-40 秒，请耐心等待…', 'info');
+    var btn = document.querySelector('#mainTabCompete .btn-mkt-start');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
     var TABS = ['Overview','Position','OrderProb','Keyword','Adlift','Strategy'];
     TABS.forEach(function(t){ var el = document.getElementById('compTab' + t); if (el) el.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><p style="font-size:1rem;margin-bottom:8px">正在采集竞争数据...</p><p style="font-size:0.75rem">SIF MCP + Amazon 页面抓取 · 约 20-40 秒</p></div>'; });
     fetch(url).then(function(r){return r.json();}).then(function(data){
         COMP_STATE.data = data;
+        if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
         if (data.errors && Object.keys(data.errors).length) {
             showToast('部分数据获取失败: ' + Object.entries(data.errors).map(function(e){return e[0]+': '+e[1];}).join('; '));
         }
         renderCompAll();
-    }).catch(function(e){ showToast('分析请求失败: ' + e.message); });
+    }).catch(function(e){
+        if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
+        showToast('分析请求失败: ' + e.message);
+    });
 }
 
 // ── Tab switching ─────────────────────────────────────────────

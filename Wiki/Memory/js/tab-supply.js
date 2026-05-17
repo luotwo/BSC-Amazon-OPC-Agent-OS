@@ -36,11 +36,14 @@ async function startSupplyChainAnalysis() {
   var asin = document.getElementById('scAsin').value.trim();
   var productName = document.getElementById('scProductName').value.trim();
   var marketplace = document.getElementById('scMarketplace').value;
-  if (!marketplace) { showToast('请选择站点'); return; }
-  if (!asin && !productName) { showToast('请输入 ASIN 或产品名称'); return; }
+  if (!productName && !marketplace) { showToast('请选择站点'); return; }
+  if (!asin && !productName) { showToast('请输入 ASIN 或中文产品名称'); return; }
   if (asin && !/^[A-Za-z0-9]{5,15}$/.test(asin)) { showToast('ASIN 格式错误（5-15 位字母数字）'); return; }
 
   try { await getSupplyChainSettings(); } catch(e) {}
+  showToast('正在搜索 1688 货源，预计 10-20 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabSupplyChain .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
   var loadingMsg = productName ? '正在用产品名直接搜索 1688...' : '正在翻译产品标题 → Sorftime 1688 货源搜索...';
   document.getElementById('scResults').innerHTML =
     '<div class="mkt-loading"><div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' +
@@ -52,10 +55,12 @@ async function startSupplyChainAnalysis() {
   fetch('/api/supply-chain/' + jobId + qs)
     .then(function(r){ return r.json(); })
     .then(function(data){
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
       if (data.error) { document.getElementById('scResults').innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">' + escHtml(data.error) + '</div>'; return; }
       renderSupplyChainResults(data);
     })
     .catch(function(err){
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 开始分析'; }
       document.getElementById('scResults').innerHTML = '<div class="mkt-empty-card" style="color:var(--red)">请求失败：' + escHtml(err.message) + '</div>';
     });
 }

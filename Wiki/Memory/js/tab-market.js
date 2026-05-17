@@ -59,6 +59,9 @@ async function startMarketAnalysis() {
   if (empty) empty.style.display = 'none';
   MKT_STATE.loading = true;
   mktShowLoading();
+  showToast('正在调用 SIF + Sorftime + SellerSprite 分析市场数据，预计 20-60 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabMarket .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
 
   var jobId = 'mkt' + Date.now().toString(36) + Math.random().toString(36).substr(2,6);
   var qs = '?asin=' + encodeURIComponent(asin) +
@@ -70,11 +73,13 @@ async function startMarketAnalysis() {
     .then(function(data){
       MKT_STATE.loading = false;
       MKT_STATE.data = data;
+      if (btn) { btn.disabled = false; btn.textContent = '📊 开始分析'; }
       if (data.error) { showToast('分析失败：' + data.error); mktShowError(data.error); return; }
       mktRenderAll(data);
     })
     .catch(function(err){
       MKT_STATE.loading = false;
+      if (btn) { btn.disabled = false; btn.textContent = '📊 开始分析'; }
       showToast('请求失败：' + err.message);
       mktShowError(err.message);
     });
@@ -360,7 +365,7 @@ function renderMarketSupply(data) {
     dmdHtml = '<div class="mkt-card" style="margin-bottom:10px;border-left:3px solid var(--green)">' +
       '<div class="mkt-card-head">📈 需求生命周期 · ' + escHtml(lc.diagnosis_cn || lc.diagnosis) + '</div>' +
       _metric('趋势方向', lc.trend_direction === 'growing' ? '📈 增长' : (lc.trend_direction === 'declining' ? '📉 下滑' : '➡ 平稳')) +
-      _metric('近期动量', '<span style="color:' + momColor + ';font-weight:600">' + escHtml(lc.trend_momentum || '—') + '</span>') +
+      _metric('近期动量', '<span style="color:' + momColor + ';font-weight:600">' + escHtml(lc.trend_momentum || '—') + '</span>', '', true) +
       _metric('同比变化', lc.yoy_change != null ? (lc.yoy_change >= 0 ? '+' : '') + (lc.yoy_change * 100).toFixed(1) + '%' : '—') +
       _metric('季节性强弱', lc.seasonality_strength ? ({high:'🔴 强', moderate:'🟡 中', low:'🟢 弱'})[lc.seasonality_strength] || lc.seasonality_strength : '—') +
       _metric('旺季月份', (lc.peak_months || []).join('月、') + '月') +

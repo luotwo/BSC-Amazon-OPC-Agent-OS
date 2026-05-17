@@ -8,7 +8,8 @@ var eventSource = null;
 
 /* ── Tab Permissions & Sidebar State ── */
 var ALLOWED_TABS = [];
-var SIDEBAR_COLLAPSED = localStorage.getItem('sidebarCollapsed') === '1';
+var SIDEBAR_COLLAPSED = false;
+try { SIDEBAR_COLLAPSED = localStorage.getItem('sidebarCollapsed') === '1'; } catch(e) {}
 var TREE_GROUPS_COLLAPSED = {};
 try { TREE_GROUPS_COLLAPSED = JSON.parse(localStorage.getItem('treeGroupsCollapsed') || '{}'); } catch(e) {}
 
@@ -235,7 +236,8 @@ function updateTabVisibility(allowedTabs) {
 }
 
 /* ── toggleSidebar ── */
-var SIDEBAR_WIDTH = parseInt(localStorage.getItem('sidebarWidth')) || 270;
+var SIDEBAR_WIDTH = 270;
+try { var w = parseInt(localStorage.getItem('sidebarWidth')); if (w > 0) SIDEBAR_WIDTH = w; } catch(e) {}
 function toggleSidebar() {
   var sb = document.getElementById('mainSidebar');
   var btn = document.getElementById('navSidebarToggle');
@@ -249,7 +251,7 @@ function toggleSidebar() {
     sb.style.width = SIDEBAR_WIDTH + 'px';
     if (btn) btn.textContent = '«';
   }
-  localStorage.setItem('sidebarCollapsed', SIDEBAR_COLLAPSED ? '1' : '0');
+  try { localStorage.setItem('sidebarCollapsed', SIDEBAR_COLLAPSED ? '1' : '0'); } catch(e) {}
 }
 
 /* ── Sidebar drag resize ── */
@@ -281,7 +283,7 @@ function toggleSidebar() {
     document.removeEventListener('mouseup', onMouseUp);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-    localStorage.setItem('sidebarWidth', SIDEBAR_WIDTH);
+    try { localStorage.setItem('sidebarWidth', SIDEBAR_WIDTH); } catch(e) {}
   }
   // Attach after DOM ready
   setTimeout(function(){
@@ -304,7 +306,7 @@ function _doToggleGroup(groupId) {
   if (closed) { children.classList.remove('collapsed'); if(header)header.classList.remove('collapsed'); }
   else { children.classList.add('collapsed'); if(header)header.classList.add('collapsed'); }
   TREE_GROUPS_COLLAPSED[groupId] = !closed;
-  localStorage.setItem('treeGroupsCollapsed', JSON.stringify(TREE_GROUPS_COLLAPSED));
+  try { localStorage.setItem('treeGroupsCollapsed', JSON.stringify(TREE_GROUPS_COLLAPSED)); } catch(e) {}
 }
 
 /* ── initSidebarState ── */

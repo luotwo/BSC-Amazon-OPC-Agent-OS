@@ -37,6 +37,9 @@ async function startTrafficAnomaly() {
 
     TA_STATE.data = null;
     TA_STATE.tab = 'overview';
+    showToast('正在诊断流量异常，预计 10-60 秒，请耐心等待…', 'info');
+    var btn = document.querySelector('#mainTabTrafficAnomaly .btn-mkt-start');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 诊断中...'; }
     document.getElementById('taResults').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af">正在诊断 ' + escHtml(asin) + ' 流量变化...<br><small>约 10-60 秒</small></div>';
     document.querySelectorAll('#taSubTabs .expert-tab').forEach(function(b){ b.classList.remove('active'); });
     document.querySelector('#taSubTabs .expert-tab').classList.add('active');
@@ -45,8 +48,12 @@ async function startTrafficAnomaly() {
         var r = await fetch('/api/traffic-anomaly/' + Date.now() + '?' + p);
         if (!r.ok) { var e = await r.json().catch(function(){return{};}); throw new Error(e.error || '请求失败 '+r.status); }
         TA_STATE.data = await r.json();
+        if (btn) { btn.disabled = false; btn.textContent = '🔬 开始诊断'; }
         taRender();
-    } catch(e) { document.getElementById('taResults').innerHTML = '<div class="mkt-empty-card">诊断失败：' + escHtml(e.message) + '</div>'; }
+    } catch(e) {
+        if (btn) { btn.disabled = false; btn.textContent = '🔬 开始诊断'; }
+        document.getElementById('taResults').innerHTML = '<div class="mkt-empty-card">诊断失败：' + escHtml(e.message) + '</div>';
+    }
 }
 
 function switchTATab(name) {

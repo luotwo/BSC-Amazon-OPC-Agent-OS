@@ -200,6 +200,7 @@ function submitActivation() {
 }
 loadLicenseStatus();
 checkUpdate();
+tplLoad();
 
 // ── API Test ──
 async function testApi(service) {

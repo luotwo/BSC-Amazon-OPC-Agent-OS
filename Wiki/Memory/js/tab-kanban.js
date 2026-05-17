@@ -21,6 +21,9 @@ function startKanban() {
   if (!mp) { showToast('请选择站点'); return; }
   if (!asin || !/^[A-Za-z0-9]{5,15}$/.test(asin)) { showToast('ASIN格式错误'); return; }
   updateKanbanSourceBadges();
+  showToast('正在聚合各模块分析数据，预计 5-15 秒，请耐心等待…', 'info');
+  var btn = document.querySelector('#mainTabKanban .btn-mkt-start');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 分析中...'; }
   var ph = document.getElementById('kanbanPlaceholder');
   var resultEl = document.getElementById('kanbanResult');
   if (ph) ph.style.display = 'none';
@@ -29,10 +32,14 @@ function startKanban() {
   fetch('/api/kanban/kb_' + Date.now().toString(36) + '?asin=' + encodeURIComponent(asin) + '&marketplace=' + encodeURIComponent(mp))
     .then(function(r){ return r.json(); })
     .then(function(data){
+      if (btn) { btn.disabled = false; btn.textContent = '▶ 开始分析'; }
       if (data.error) { showToast(data.error); if (ph) { ph.style.display = 'block'; ph.innerHTML = '<div style="color:var(--red);padding:20px">' + escHtml(data.error) + '</div>'; } return; }
       renderKanban(data);
     })
-    .catch(function(err){ showToast('请求失败'); });
+    .catch(function(err){
+      if (btn) { btn.disabled = false; btn.textContent = '▶ 开始分析'; }
+      showToast('请求失败');
+    });
 }
 
 function renderKanban(data) {

@@ -16,7 +16,8 @@ var TPL_DATA = {};
 var TPL_DEFAULTS = {};
 var TPL_EXPANDED = {};
 var TPL_HOVER_TIMER = null;
-var TPL_COLLAPSED = localStorage.getItem('tplCollapsed') === '1';
+var TPL_COLLAPSED = false;
+try { TPL_COLLAPSED = localStorage.getItem('tplCollapsed') === '1'; } catch(e) {}
 
 function tplTogglePanel() {
   TPL_COLLAPSED = !TPL_COLLAPSED;
@@ -29,7 +30,7 @@ function tplTogglePanel() {
     panel.classList.remove('collapsed');
     if (btn) btn.textContent = '◀';
   }
-  localStorage.setItem('tplCollapsed', TPL_COLLAPSED ? '1' : '0');
+  try { localStorage.setItem('tplCollapsed', TPL_COLLAPSED ? '1' : '0'); } catch(e) {}
 }
 
 function tplInitCollapsed() {
@@ -55,7 +56,8 @@ async function tplLoad() {
       if (TPL_DATA[t].items && TPL_DATA[t].items.length>0) TPL_EXPANDED[t] = true;
     }
     tplRender();
-    tplApplyDefaults();
+    // tplApplyDefaults() removed — tplInjectSelectors handles it with correct select state
+    tplInjectSelectors();
     tplInitCollapsed();
   } catch(e) {
     console.error('tplLoad failed:', e);
@@ -110,6 +112,7 @@ function tplRender(filter) {
     }
     html += '</div></div>';
   }
+  html += '<div class="tpl-bottom-btn"><button onclick="tplOpenNewModal()">+ 新建模板</button></div>';
   el.innerHTML = html;
 }
 
@@ -507,14 +510,11 @@ function tplTimeAgo(iso) {
   } catch(e){ return ''; }
 }
 
-// Patch loadPrompts: inject template selectors + batch toolbar after render
+// Patch loadPrompts: load templates first, then inject selectors (TPL_DATA must be ready)
 var _origLoadPrompts = loadPrompts;
 loadPrompts = async function(jobId) {
   await _origLoadPrompts(jobId);
-  setTimeout(function(){
-    tplInjectSelectors();
-    tplLoad();
-  }, 100);
+  tplLoad();
 };
 
 function tplInjectSelectors() {
