@@ -1,4 +1,4 @@
-# BSC OPC Agent OS — Personal Edition
+# BSC OPC Agent OS 
 
 Amazon 产品运营工具：智能图片生成 + Listing 优化。
 
